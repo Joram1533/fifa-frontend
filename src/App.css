@@ -1,0 +1,389 @@
+/* ── Reset & base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --brand-deep:   #1a003d;
+  --brand-accent: #7ec23a;
+  --text-dark:    #121212;
+  --text-mid:     #555;
+  --text-light:   #888;
+  --border:       #e0e0e0;
+  --bg-page:      #f4f4f4;
+  --font:         'Inter', system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg-page);
+  color: var(--text-dark);
+}
+/* 1. Target the very first div inside the header (the logo container) */
+header > div:first-child {
+  font-size: 0 !important; /* This hides the original "viagogo" text */
+  visibility: hidden; /* Extra fallback to hide the original text */
+}
+
+/* 2. Inject the new "FIFA TICKETS" text right over it */
+header > div:first-child::after {
+  content: "Fifa Tickets";
+  visibility: visible;
+  display: block;
+  
+  /* Apply your official FIFA styling here */
+  font-size: 1.5rem !important;
+  font-weight: 900 !important;
+  color: #00d4ff !important; /* The neon cyan color */
+  letter-spacing: -1px;
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+.wc-app { min-height: 100vh; background: var(--bg-page); }
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.wc-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 24px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+
+.wc-logo {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--brand-accent);
+  flex-shrink: 0;
+  letter-spacing: -0.5px;
+}
+
+.wc-search-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: #f5f5f5;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0 14px;
+  gap: 8px;
+}
+
+.wc-search-icon { font-size: 1.1rem; color: var(--text-light); line-height: 1; }
+
+.wc-search {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+  font-size: 0.85rem;
+  color: var(--text-dark);
+  outline: none;
+}
+
+.wc-nav { display: flex; gap: 20px; flex-shrink: 0; }
+
+.wc-nav a {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-mid);
+  text-decoration: none;
+}
+
+.wc-nav a:hover { color: var(--text-dark); }
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+.wc-hero {
+  background: var(--brand-deep);
+  padding: 36px 24px 30px;
+  text-align: center;
+  color: #fff;
+}
+
+.wc-hero-eyebrow {
+  display: inline-block;
+  background: rgba(126,194,58,.15);
+  border: 1px solid rgba(126,194,58,.3);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #a8d96a;
+  margin-bottom: 14px;
+}
+
+.wc-hero h1 { font-size: 1.9rem; font-weight: 700; margin-bottom: 6px; }
+.wc-hero p  { font-size: 0.9rem; color: rgba(255,255,255,.5); margin-bottom: 20px; }
+
+.wc-hero-pills {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.wc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,.65);
+}
+
+.wc-pill b { color: #fff; }
+
+.wc-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand-accent);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* ── Filters ─────────────────────────────────────────────────────────────── */
+.wc-filters {
+  display: flex;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.wc-filter-btn {
+  padding: 5px 13px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 14px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.wc-filter-btn:hover  { background: #f0f0f0; }
+
+.wc-filter-btn.active {
+  background: var(--brand-deep);
+  color: #fff;
+  border-color: var(--brand-deep);
+}
+
+.wc-filter-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ── Main ────────────────────────────────────────────────────────────────── */
+.wc-main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 24px 48px;
+}
+
+.wc-list-header { margin-bottom: 14px; }
+
+.wc-count { font-size: 0.82rem; color: var(--text-light); }
+.wc-count strong { color: var(--text-dark); font-weight: 600; }
+
+.wc-list { list-style: none; }
+
+/* ── Section label ───────────────────────────────────────────────────────── */
+.wc-section-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 14px 0 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+  list-style: none;
+}
+
+/* ── Match card ──────────────────────────────────────────────────────────── */
+.wc-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.wc-card:hover {
+  border-color: #bbb;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+
+.wc-card-played { opacity: 0.65; }
+
+/* ── Date column ─────────────────────────────────────────────────────────── */
+.wc-card-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 44px;
+  padding-right: 14px;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.wc-date-mon {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.wc-date-num {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  line-height: 1.1;
+}
+
+.wc-date-day {
+  font-size: 0.65rem;
+  color: var(--text-light);
+  text-transform: uppercase;
+}
+
+/* ── Card body ───────────────────────────────────────────────────────────── */
+.wc-card-body  { flex: 1; min-width: 0; }
+
+.wc-matchup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.wc-team {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  white-space: nowrap;
+}
+
+.wc-flag {
+  width: 20px;
+  height: 13px;
+  border-radius: 2px;
+  border: 1px solid #eee;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #f0f0f0;
+}
+
+.wc-flag-unknown {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: var(--text-light);
+  background: #f0f0f0;
+  border-radius: 2px;
+  width: 20px;
+  height: 13px;
+}
+
+.wc-vs    { font-size: 0.72rem; color: var(--text-light); padding: 0 2px; flex-shrink: 0; }
+.wc-score { font-size: 0.78rem; font-weight: 700; color: var(--text-mid); margin-left: 4px; }
+.wc-time  { font-size: 0.72rem; color: var(--text-light); margin-left: 4px; }
+
+.wc-meta { font-size: 0.75rem; color: var(--text-light); margin-bottom: 6px; }
+.wc-meta span + span::before { content: ' · '; }
+
+/* ── Tags ────────────────────────────────────────────────────────────────── */
+.wc-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+
+.wc-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 8px;
+}
+
+.wc-tag-hot      { background: #faeeda; color: #7a4700; }
+.wc-tag-urgent   { background: #fdecea; color: #9b2626; border: 1px solid #f5b8b8; }
+.wc-tag-debut    { background: #eeedfe; color: #3c3489; }
+.wc-tag-value    { background: #eaf3de; color: #3b6d11; }
+.wc-tag-group    { background: #f0f0f0; color: var(--text-mid); }
+.wc-tag-knockout { background: #fef3e2; color: #7a4700; }
+
+/* ── Card action ─────────────────────────────────────────────────────────── */
+.wc-card-action { flex-shrink: 0; }
+
+.wc-btn {
+  padding: 8px 14px;
+  border: 1px solid var(--text-dark);
+  background: #fff;
+  color: var(--text-dark);
+  border-radius: 7px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.wc-btn:hover {
+  background: var(--brand-deep);
+  color: #fff;
+  border-color: var(--brand-deep);
+}
+
+.wc-btn-played {
+  background: #f0f0f0;
+  border-color: var(--border);
+  color: var(--text-light);
+  cursor: default;
+}
+
+.wc-btn-played:hover {
+  background: #f0f0f0;
+  color: var(--text-light);
+  border-color: var(--border);
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.wc-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .wc-header { flex-wrap: wrap; }
+  .wc-nav    { display: none; }
+  .wc-hero h1 { font-size: 1.4rem; }
+  .wc-card { flex-wrap: wrap; }
+  .wc-card-action { width: 100%; }
+  .wc-btn { width: 100%; text-align: center; }
+}
