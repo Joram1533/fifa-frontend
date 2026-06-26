@@ -369,7 +369,7 @@ function MatchesPage() {
   useEffect(() => {
     const fetchBaseMatches = async () => {
       try {
-        const response = await fetch('https://fifa-ticket-api.onrender.com/api/matches');
+        const response = await fetch('https://fifa-ticket-api-1.onrender.com/api/matches');
         if (!response.ok) throw new Error('Failed to fetch from backend');
         const data = await response.json();
 
