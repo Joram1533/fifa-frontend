@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 
 import App from './App.jsx'
-import Sell from './components/Sell.jsx'
+import Sell from './components/sell.jsx'
 import MyTickets from './components/MyTickets.jsx'
 import Success from './components/Success.jsx'  // ✅ ADDED
 
