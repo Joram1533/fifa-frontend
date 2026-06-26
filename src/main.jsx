@@ -5,8 +5,9 @@ import './index.css'
 
 import App from './App.jsx'
 import Sell from './components/sell.jsx'
-import MyTickets from './components/MyTickets.jsx'
-import Success from './components/Success.jsx'  // ✅ ADDED
+import MyTickets from "./components/MyTickets.jsx";
+import Success from "./components/success.jsx";
+import Navbar from "./components/Navbar.jsx";
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
