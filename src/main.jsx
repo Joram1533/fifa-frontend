@@ -4,9 +4,9 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 
 import App from './App.jsx'
-import Sell from './components/sell.jsx'
-import MyTickets from "./components/MyTickets.jsx";
-import Success from "./components/success.jsx";
+import MyTickets from "./components/UserTickets.jsx";
+import Success from "./components/PaymentSuccess.jsx";
+import Sell from "./components/SellTickets.jsx";
 import Navbar from "./components/Navbar.jsx";
 
 createRoot(document.getElementById('root')).render(
