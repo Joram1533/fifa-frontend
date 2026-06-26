@@ -1,7 +1,7 @@
 // src/pages/CheckoutSuccess.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import './TicketSuccess.css'; // Make sure this CSS file is saved in the same folder!
+import './TicketSuccess.css';
 
 // Helper to generate sequential seats and unique ticket IDs
 const generateSeats = (qty) => {
@@ -23,9 +23,11 @@ export default function CheckoutSuccess() {
   const [orderData, setOrderData] = useState({ orderId: "", total: 0 });
   const [seats, setSeats] = useState([]);
 
-  // Fallback match data for the UI (Since capture-order only returns orderId/total right now)
+  // ── Prevents React Strict Mode from firing the capture twice ────────────
+  const hasCaptured = useRef(false);
+
   const matchData = {
-    qty: 2, // Hardcoded to 2 for the UI example
+    qty: 2,
     tier: 'Category 1',
     t1: 'England',
     t2: 'Ghana',
@@ -35,10 +37,16 @@ export default function CheckoutSuccess() {
   };
 
   useEffect(() => {
+    // ── GUARD: only run once even in React Strict Mode ───────────────────
+    if (hasCaptured.current) {
+      console.log('⚡ Skipping duplicate capture call (React Strict Mode)');
+      return;
+    }
+    hasCaptured.current = true;
+
     const paypalOrderId = params.get("token"); 
     if (!paypalOrderId) { setStatus("error"); return; }
 
-    // ── CAPTURE PAYMENT VIA YOUR BACKEND ─────────────────────────────────
     fetch("http://localhost:4000/api/paypal/capture-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -46,12 +54,29 @@ export default function CheckoutSuccess() {
     })
       .then(r => r.json())
       .then(data => {
-        if (data.success) { 
+        if (data.success) {
+          const generatedSeats = generateSeats(matchData.qty);
+
+          // ── Save to localStorage so MyTickets page can read it ───────
+          const purchasePayload = {
+            team1: matchData.t1,
+            team2: matchData.t2,
+            date: matchData.date,
+            venue: matchData.venue,
+            city: '',
+            quantity: matchData.qty,
+            ticketIds: generatedSeats.map(s => s.ticketId),
+          };
+          localStorage.setItem('recentPurchase', JSON.stringify(purchasePayload));
+          console.log('✅ Saved to localStorage:', purchasePayload);
+          // ─────────────────────────────────────────────────────────────
+
           setOrderData({ orderId: data.orderId, total: data.total });
-          setSeats(generateSeats(matchData.qty)); // Generate the seats
+          setSeats(generatedSeats);
           setStatus("success"); 
+        } else {
+          setStatus("error");
         }
-        else setStatus("error");
       })
       .catch((err) => {
         console.error("Capture error:", err);
@@ -59,7 +84,7 @@ export default function CheckoutSuccess() {
       });
   }, [params]);
 
-  // ── LOADING STATE ──────────────────────────────────────────────────────
+  // ── LOADING STATE ────────────────────────────────────────────────────────
   if (status === "processing") return (
     <div className="fifa-dashboard" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <div style={{ textAlign: "center", padding: 60, background: '#fff', borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
@@ -69,7 +94,7 @@ export default function CheckoutSuccess() {
     </div>
   );
 
-  // ── ERROR STATE ────────────────────────────────────────────────────────
+  // ── ERROR STATE ──────────────────────────────────────────────────────────
   if (status === "error") return (
     <div className="fifa-dashboard" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <div style={{ textAlign: "center", padding: 60, background: '#fff', borderRadius: 12, border: '2px solid #e24b4a' }}>
@@ -79,7 +104,7 @@ export default function CheckoutSuccess() {
     </div>
   );
 
-  // ── SUCCESS STATE (FIFA DASHBOARD) ─────────────────────────────────────
+  // ── SUCCESS STATE ────────────────────────────────────────────────────────
   return (
     <div className="fifa-dashboard">
       <div className="fifa-container">
@@ -149,17 +174,16 @@ export default function CheckoutSuccess() {
             <a href="#buy">Buy tickets</a>
           </nav>
 
-          {/* Promo Banners */}
           <div className="fifa-promo visa-promo">
             <h3>VISA</h3>
             <p>The Official Way to Pay</p>
           </div>
           
           <div className="fifa-promo hospitality-promo">
-             <div className="hospitality-content">
-               <span className="hosp-logo">🏆 FIFA</span>
-               <h4>EXPLORE TICKET-INCLUSIVE HOSPITALITY</h4>
-             </div>
+            <div className="hospitality-content">
+              <span className="hosp-logo">🏆 FIFA</span>
+              <h4>EXPLORE TICKET-INCLUSIVE HOSPITALITY</h4>
+            </div>
           </div>
         </aside>
 

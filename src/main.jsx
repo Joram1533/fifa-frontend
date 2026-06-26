@@ -1,30 +1,22 @@
-// src/main.jsx
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, RouterProvider } from "react-router-dom"
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
-import App from './App.jsx'
-import MyTickets from './components/mytickets.jsx'
-import Success from './components/success.jsx' // 🔥 Imported the new Success bridge
 
-// ── ROUTER SETUP: Controls which page loads based on the URL ──
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <App />, // Your main ticketing store
-  },
-  {
-    path: "/my-tickets",
-    element: <MyTickets />, // The new light-mode portal
-  },
-  {
-    path: "/checkout/success", // 🔥 This perfectly matches your backend PayPal return URL
-    element: <Success />, 
-  },
-]);
+import App from './App.jsx'
+import Sell from './components/Sell.jsx'
+import MyTickets from './components/MyTickets.jsx'
+import Success from './components/Success.jsx'  // ✅ ADDED
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/"                 element={<App />} />
+        <Route path="/sell"             element={<Sell />} />
+        <Route path="/my-tickets"       element={<MyTickets />} />
+        <Route path="/checkout/success" element={<Success />} />  {/* ✅ ADDED */}
+      </Routes>
+    </BrowserRouter>
   </StrictMode>,
 )

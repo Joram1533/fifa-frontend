@@ -1,8 +1,10 @@
 // src/TicketCheckout.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 
-// ── Ticket tier config ──────────────────────────────────────────────────────
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+
 const TIERS = [
   { id: "cat1", label: "Category 1", desc: "Best seats — behind goals, lower tier", price: 850, available: 12 },
   { id: "cat2", label: "Category 2", desc: "Side stands, mid-tier", price: 520, available: 28 },
@@ -11,9 +13,10 @@ const TIERS = [
 ];
 
 const FEES = { service: 0.12, booking: 4.99 };
+const fmt = (n) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
-const fmt = (n) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+// ── Single shared keyframes injection (was duplicated in Step3 & Step4) ───────
+const SHARED_STYLES = `@keyframes spin { to { transform: rotate(360deg); } }`;
 
 function useCountdown(targetSeconds) {
   const [secs, setSecs] = useState(targetSeconds);
@@ -172,7 +175,8 @@ function Step1({ match, onNext }) {
       {tier && (
         <div style={{ marginTop: 16 }}>
           <OrderSummary tier={tier} qty={qty} />
-          <button onClick={() => onNext({ tier, qty })}
+          <button
+            onClick={() => onNext({ tier, qty, match })}
             style={{ width: "100%", marginTop: 12, padding: "13px 0", background: "#1a003d", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
             Continue to details →
           </button>
@@ -241,6 +245,8 @@ function Step2({ data, onNext, onBack }) {
 
 // ── Step 3: PayPal payment ───────────────────────────────────────────────────
 function Step3({ data, onNext, onBack }) {
+  console.log("STEP3 data.match:", data.match);
+  console.log("STEP3 data.match?.t1:", data.match?.t1);
   const [loading, setLoading] = useState(false);
 
   const subtotal = data.tier.price * data.qty;
@@ -250,7 +256,7 @@ function Step3({ data, onNext, onBack }) {
   const handlePayPal = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:4000/api/paypal/create-order", {
+      const res = await fetch(`${API_URL}/api/paypal/create-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -262,16 +268,17 @@ function Step3({ data, onNext, onBack }) {
       const json = await res.json();
       if (json.error) throw new Error(json.error);
 
-      sessionStorage.setItem("paypalOrderId", json.paypalOrderId);
-      sessionStorage.setItem("internalOrderId", json.orderId);
-      
-      // 🔥 THE FIX: Storing the exact package of data the new tab needs to generate the tickets
-      localStorage.setItem("wc26_pending_order", JSON.stringify({
+      localStorage.setItem("pendingTicketData", JSON.stringify({
+        team1: data.match?.t1,
+        team2: data.match?.t2,
+        date: data.match?.date,
+        venue: data.match?.venue,
+        city: data.match?.city,
+        quantity: data.qty,
+        tierLabel: data.tier.label,
         tierId: data.tier.id,
-        qty: data.qty,
         buyer: data.buyer,
-        matchData: data.match,
-        internalOrderId: json.orderId
+        internalOrderId: json.orderId,
       }));
 
       window.location.href = json.approvalUrl;
@@ -284,7 +291,6 @@ function Step3({ data, onNext, onBack }) {
   return (
     <div>
       <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 16, color: "#121212" }}>Payment</div>
-
       <div style={{ background: "#fafafa", border: "1px solid #e0e0e0", borderRadius: 12, padding: "24px 20px", marginBottom: 16, textAlign: "center" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 14 }}>
           <span style={{ fontSize: 26, fontWeight: 800, color: "#003087", fontFamily: "Arial, sans-serif" }}>Pay</span>
@@ -296,7 +302,6 @@ function Step3({ data, onNext, onBack }) {
         <div style={{ fontSize: 22, fontWeight: 700, color: "#1a003d", marginBottom: 4 }}>{fmt(total)}</div>
         <div style={{ fontSize: 11, color: "#888" }}>{data.tier.label} × {data.qty} + fees</div>
       </div>
-
       <div style={{ display: "flex", gap: 8, marginBottom: 16, justifyContent: "center", flexWrap: "wrap" }}>
         {[
           { icon: "ti-shield-check", text: "Buyer protection" },
@@ -309,9 +314,7 @@ function Step3({ data, onNext, onBack }) {
           </div>
         ))}
       </div>
-
       <OrderSummary tier={data.tier} qty={data.qty} compact />
-
       <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
         <button onClick={onBack} style={{ flex: 1, padding: "11px 0", background: "#fff", color: "#555", border: "1px solid #e0e0e0", borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
           ← Back
@@ -323,13 +326,50 @@ function Step3({ data, onNext, onBack }) {
             : <><span style={{ fontWeight: 800 }}>Pay</span><span style={{ fontWeight: 800, color: "#009cde" }}>Pal</span> — {fmt(total)}</>}
         </button>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      {/* spin keyframe now lives in CheckoutModal — removed from here */}
     </div>
   );
 }
 
 // ── Step 4: Confirmation ─────────────────────────────────────────────────────
 function Step4({ data }) {
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+
+  // FIX: useMemo instead of IIFE so this only runs once, not on every render
+  const orderId = useMemo(() => {
+    if (data.orderId) return data.orderId;
+    try {
+      const pending = JSON.parse(localStorage.getItem("pendingTicketData") || "{}");
+      return pending.internalOrderId;
+    } catch {
+      return undefined;
+    }
+  }, [data.orderId]);
+
+  // Opens /my-tickets in a new tab (intentional — keeps confirmation page open)
+  const handleDownload = () => {
+    window.open("/my-tickets", "_blank");
+  };
+
+  const handleEmailReceipt = async () => {
+    setEmailLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/orders/send-receipt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, email: data.buyer?.email }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setEmailSent(true);
+    } catch (err) {
+      alert("Failed to send receipt: " + err.message);
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
   return (
     <div style={{ textAlign: "center" }}>
       <div style={{ width: 64, height: 64, background: "#7ec23a", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
@@ -340,7 +380,7 @@ function Step4({ data }) {
 
       <div style={{ background: "#1a003d", borderRadius: 12, padding: "20px", marginBottom: 20, color: "#fff", textAlign: "left" }}>
         <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>Booking reference</div>
-        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: 2, fontFamily: "monospace", marginBottom: 12 }}>{data.orderId}</div>
+        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: 2, fontFamily: "monospace", marginBottom: 12 }}>{orderId ?? "—"}</div>
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 12 }}>
           <div><div style={{ color: "rgba(255,255,255,0.45)", marginBottom: 2 }}>Category</div><div style={{ fontWeight: 600 }}>{data.tier.label}</div></div>
           <div><div style={{ color: "rgba(255,255,255,0.45)", marginBottom: 2 }}>Quantity</div><div style={{ fontWeight: 600 }}>{data.qty} ticket{data.qty > 1 ? "s" : ""}</div></div>
@@ -350,13 +390,18 @@ function Step4({ data }) {
       </div>
 
       <div style={{ display: "flex", gap: 10 }}>
-        <button style={{ flex: 1, padding: "11px 0", background: "#fff", border: "1px solid #e0e0e0", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, color: "#121212" }}>
+        <button onClick={handleDownload}
+          style={{ flex: 1, padding: "11px 0", background: "#fff", border: "1px solid #e0e0e0", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, color: "#121212" }}>
           <i className="ti ti-download" />Download tickets
         </button>
-        <button style={{ flex: 1, padding: "11px 0", background: "#fff", border: "1px solid #e0e0e0", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, color: "#121212" }}>
-          <i className="ti ti-mail" />Email receipt
+        <button onClick={handleEmailReceipt} disabled={emailLoading || emailSent}
+          style={{ flex: 1, padding: "11px 0", background: emailSent ? "#f0f8e8" : "#fff", border: `1px solid ${emailSent ? "#c8e6a0" : "#e0e0e0"}`, borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: emailLoading || emailSent ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, color: emailSent ? "#3b6d11" : "#121212" }}>
+          <i className={`ti ${emailSent ? "ti-circle-check" : emailLoading ? "ti-loader-2" : "ti-mail"}`}
+            style={emailLoading ? { animation: "spin 1s linear infinite" } : {}} />
+          {emailSent ? "Receipt sent!" : emailLoading ? "Sending…" : "Email receipt"}
         </button>
       </div>
+      {/* spin keyframe now lives in CheckoutModal — removed from here */}
     </div>
   );
 }
@@ -371,6 +416,8 @@ function CheckoutModal({ match, onClose }) {
 
   return createPortal(
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      {/* Single shared keyframes definition for the entire modal */}
+      <style>{SHARED_STYLES}</style>
       <div style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto", padding: "24px", position: "relative" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <span style={{ fontWeight: 700, fontSize: 16, color: "#121212" }}>Buy tickets</span>

@@ -1,42 +1,26 @@
 // src/components/Navbar.jsx
-//
-// Drop-in replacement for the <header> block inside App.jsx.
-// Uses Firebase's onAuthStateChanged to react instantly when the user
-// logs in or out from *any* tab — no polling, no stale state.
-//
-// Props:
-//   search      {string}   — controlled search value (from App)
-//   onSearch    {fn}       — setter passed down from App
-//
-// Usage in App.jsx:
-//   import Navbar from './components/Navbar';
-//   ...
-//   <Navbar search={search} onSearch={setSearch} />
-
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { Link, useNavigate } from 'react-router-dom'; // 🔥 IMPORT ROUTER HOOKS
 import AuthModal from './AuthModal';
 
 export default function Navbar({ search, onSearch }) {
-  const navigate = useNavigate();
-  const [user,        setUser]        = useState(null);   // Firebase user object or null
-  const [authReady,   setAuthReady]   = useState(false);  // hide nav until Firebase resolves
-  const [modalOpen,   setModalOpen]   = useState(false);
-  const [menuOpen,    setMenuOpen]    = useState(false);  // user dropdown
+  const [user,          setUser]          = useState(null);
+  const [authReady,     setAuthReady]     = useState(false);
+  const [modalOpen,     setModalOpen]     = useState(false);
+  const [menuOpen,      setMenuOpen]      = useState(false);
   const menuRef = useRef(null);
+  const navigate = useNavigate(); // 🔥 Hook to programmatically change pages
 
-  // ── Listen to Firebase auth state ────────────────────────────────────────
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setAuthReady(true);
     });
-    return unsub; // cleanup on unmount
+    return unsub;
   }, []);
 
-  // ── Close dropdown when clicking outside ────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -50,15 +34,24 @@ export default function Navbar({ search, onSearch }) {
   const handleSignOut = async () => {
     setMenuOpen(false);
     await signOut(auth);
+    navigate('/'); // Kick them back to the home page if they sign out
   };
 
-  // Derive a short greeting name: "John" from "John Doe", or first part of
-  // the email if displayName is null (e.g. Google accounts always have it).
+  // ── Sell Route Guard ─────────────────────────────────
+  const handleSellClick = (e) => {
+    e.preventDefault();
+    if (!user) {
+      alert("🔒 Please sign in to access your inventory and sell tickets.");
+      setModalOpen(true);
+    } else {
+      navigate('/sell'); // 🔥 ROUTE DIRECTLY TO THE NEW SELL PAGE
+    }
+  };
+
   const greeting = user
     ? (user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'You')
     : '';
 
-  // Avatar: first letter of display name, or first letter of email
   const avatarLetter = user
     ? (user.displayName?.[0] || user.email?.[0] || '?').toUpperCase()
     : '';
@@ -66,11 +59,12 @@ export default function Navbar({ search, onSearch }) {
   return (
     <>
       <header style={s.header}>
+        {/* 🔥 Logo now acts as a Home button */}
+        <Link to="/" style={{ textDecoration: 'none' }}>
+          <div style={s.logo}>Fifa Tickets</div>
+        </Link>
 
-        {/* Logo */}
-        <div style={s.logo}>viagogo</div>
-
-        {/* Search bar */}
+        {/* ── Search bar (fully wired to App.jsx via props) ── */}
         <div style={s.searchWrap}>
           <span style={s.searchIcon}>⌕</span>
           <input
@@ -80,24 +74,31 @@ export default function Navbar({ search, onSearch }) {
             value={search}
             onChange={(e) => onSearch(e.target.value)}
           />
+          {search && (
+            <button
+              onClick={() => onSearch('')}
+              style={s.clearBtn}
+              aria-label="Clear search"
+            >
+              ×
+            </button>
+          )}
         </div>
 
-        {/* Nav links + auth */}
         <nav style={s.nav}>
-          <a href="#explore" style={s.navLink}>Explore</a>
-          <a href="#sell"    style={s.navLink}>Sell</a>
+          <Link to="/" style={s.navLink}>Explore</Link>
+          {/* 🔥 Sell button now triggers the auth guard, then routes to /sell */}
+          <a href="/sell" onClick={handleSellClick} style={s.navLink}>Sell</a>
 
-          {/* Only render the auth area once Firebase has resolved */}
           {authReady && (
             user ? (
-              /* ── Logged-in: avatar + dropdown ─────────────────────────── */
               <div style={{ position: 'relative' }} ref={menuRef}>
                 <button
                   onClick={() => setMenuOpen(o => !o)}
                   style={s.avatarBtn}
                   aria-label="Account menu"
                 >
-                  <span style={s.avatar}>{avatarLetter}</span>
+                  <div style={s.avatar}>{avatarLetter}</div>
                   <span style={s.avatarName}>{greeting}</span>
                   <span style={{ fontSize: 10, color: '#888', marginLeft: 2 }}>▾</span>
                 </button>
@@ -106,10 +107,22 @@ export default function Navbar({ search, onSearch }) {
                   <div style={s.dropdown}>
                     <div style={s.dropdownEmail}>{user.email}</div>
                     <hr style={s.dropdownDivider} />
-                    <button style={s.dropdownItem} onClick={() => { setMenuOpen(false); navigate('/my-tickets'); }}>
-                      My tickets
+                    <button
+                      style={s.dropdownItem}
+                      onClick={() => { setMenuOpen(false); navigate('/my-tickets'); }}
+                    >
+                      My Tickets
                     </button>
-                    <button style={s.dropdownItem} onClick={() => setMenuOpen(false)}>
+                    <button
+                      style={s.dropdownItem}
+                      onClick={() => { setMenuOpen(false); navigate('/sell'); }}
+                    >
+                      Sell Dashboard
+                    </button>
+                    <button
+                      style={s.dropdownItem}
+                      onClick={() => setMenuOpen(false)}
+                    >
                       Account settings
                     </button>
                     <hr style={s.dropdownDivider} />
@@ -123,11 +136,7 @@ export default function Navbar({ search, onSearch }) {
                 )}
               </div>
             ) : (
-              /* ── Logged-out: sign in button ────────────────────────────── */
-              <button
-                style={s.signInBtn}
-                onClick={() => setModalOpen(true)}
-              >
+              <button style={s.signInBtn} onClick={() => setModalOpen(true)}>
                 Sign in
               </button>
             )
@@ -135,13 +144,12 @@ export default function Navbar({ search, onSearch }) {
         </nav>
       </header>
 
-      {/* Auth modal — controlled by this component */}
       <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </>
   );
 }
 
-// ── Styles — mirror your existing App.css header exactly ─────────────────
+// ── Styles ────────────────────────────────────────────────────────────────────
 const s = {
   header: {
     position: 'sticky', top: 0, zIndex: 100,
@@ -150,24 +158,28 @@ const s = {
     background: '#fff', borderBottom: '1px solid #e0e0e0',
   },
   logo: {
-    fontSize: '1.2rem', fontWeight: 700,
-    color: '#7ec23a', flexShrink: 0, letterSpacing: '-0.5px',
+    fontSize: '1.5rem', fontWeight: 900,
+    color: '#00d4ff', flexShrink: 0, letterSpacing: '-1px',
   },
   searchWrap: {
     flex: 1, display: 'flex', alignItems: 'center',
     background: '#f5f5f5', border: '1px solid #e0e0e0',
     borderRadius: 20, padding: '0 14px', gap: 8,
   },
-  searchIcon: { fontSize: '1.1rem', color: '#888', lineHeight: 1 },
+  searchIcon:  { fontSize: '1.1rem', color: '#888', lineHeight: 1 },
   searchInput: {
     flex: 1, border: 'none', background: 'transparent',
     padding: '8px 0', fontSize: '0.85rem',
     color: '#121212', outline: 'none',
   },
+  clearBtn: {
+    background: 'none', border: 'none', cursor: 'pointer',
+    color: '#888', fontSize: '1.1rem', lineHeight: 1, padding: 0,
+  },
   nav: { display: 'flex', gap: 20, flexShrink: 0, alignItems: 'center' },
   navLink: {
     fontSize: '0.85rem', fontWeight: 500,
-    color: '#555', textDecoration: 'none',
+    color: '#555', textDecoration: 'none', cursor: 'pointer',
   },
   signInBtn: {
     fontSize: '0.85rem', fontWeight: 600,
@@ -187,7 +199,10 @@ const s = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: '0.75rem', fontWeight: 700, flexShrink: 0,
   },
-  avatarName: { fontWeight: 600, fontSize: '0.83rem', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  avatarName: {
+    fontWeight: 600, fontSize: '0.83rem',
+    maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+  },
   dropdown: {
     position: 'absolute', top: 'calc(100% + 8px)', right: 0,
     background: '#fff', border: '1px solid #e0e0e0',
@@ -197,8 +212,7 @@ const s = {
   },
   dropdownEmail: {
     padding: '12px 16px 8px',
-    fontSize: '0.75rem', color: '#888',
-    borderBottom: 'none', wordBreak: 'break-all',
+    fontSize: '0.75rem', color: '#888', wordBreak: 'break-all',
   },
   dropdownDivider: { margin: 0, border: 'none', borderTop: '1px solid #f0f0f0' },
   dropdownItem: {
@@ -206,5 +220,5 @@ const s = {
     padding: '10px 16px', background: 'none', border: 'none',
     fontSize: '0.85rem', color: '#121212', cursor: 'pointer',
     fontFamily: 'inherit',
-  },
+  }
 };
